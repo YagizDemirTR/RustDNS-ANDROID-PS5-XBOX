@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RustDNS For PS5/XBOX</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #121316;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 24px 20px 20px 20px;
+            overflow: hidden;
+        }
+
+        /* Üst Başlık */
+        .header {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.3px;
+        }
+
+        /* Orta Bölüm (Durum ve Güç Düğmesi) */
+        .center-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: -20px;
+        }
+
+        .status-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #E57373; /* Stopped Kırmızısı */
+            margin-right: 10px;
+            transition: background-color 0.3s ease;
+        }
+
+        .status-dot.active {
+            background-color: #4CAF50; /* Running Yeşili */
+            box-shadow: 0 0 12px rgba(76, 175, 80, 0.6);
+        }
+
+        .status-text {
+            font-size: 28px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+        }
+
+        .status-sub {
+            font-size: 14px;
+            color: #7A808C;
+            margin-bottom: 40px;
+            font-weight: 500;
+        }
+
+        /* Büyük Yuvarlak Güç Butonu */
+        .power-btn {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background-color: #1A1D24;
+            border: 1px solid #262A34;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+
+        .power-btn:active {
+            transform: scale(0.94);
+        }
+
+        .power-btn.active {
+            background-color: #172B23;
+            border-color: #244C3A;
+            box-shadow: 0 0 30px rgba(76, 175, 80, 0.25);
+        }
+
+        .power-icon {
+            width: 58px;
+            height: 58px;
+            fill: #6C7280;
+            transition: fill 0.3s ease;
+        }
+
+        .power-btn.active .power-icon {
+            fill: #4CAF50;
+        }
+
+        /* Konsol / Terminal Çıktı Penceresi */
+        .console-container {
+            width: 100%;
+            background-color: #0B0C0E;
+            border: 1px solid #1C2028;
+            border-radius: 12px;
+            padding: 12px;
+            height: 170px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.5);
+        }
+
+        .console-header {
+            font-size: 11px;
+            font-weight: 600;
+            color: #6C7280;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .console-logs {
+            flex: 1;
+            overflow-y: auto;
+            font-family: "SF Mono", "Courier New", monospace;
+            font-size: 11.5px;
+            color: #34D399; /* Terminal Yeşili */
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .console-logs::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .console-logs::-webkit-scrollbar-thumb {
+            background-color: #262A34;
+            border-radius: 4px;
+        }
+
+        /* Alt Butonlar (Discord / Website) */
+        .bottom-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .action-btn {
+            width: 100%;
+            height: 48px;
+            background-color: #181B22;
+            border: 1px solid #262A35;
+            border-radius: 10px;
+            color: #E2E8F0;
+            font-size: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background-color 0.2s;
+        }
+
+        .action-btn:active {
+            background-color: #242934;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header">RustDNS For PS5/XBOX</div>
+
+    <!-- Center Status & Power Button -->
+    <div class="center-section">
+        <div class="status-container">
+            <div id="statusDot" class="status-dot"></div>
+            <div id="statusText" class="status-text">Stopped</div>
+        </div>
+        <div id="statusSub" class="status-sub">Tap to start</div>
+
+        <button id="powerBtn" class="power-btn" onclick="toggleProxy()">
+            <svg class="power-icon" viewBox="0 0 24 24">
+                <path d="M16.56 5.44C15.5 4.54 14.18 4 12.75 4c-3.13 0-5.77 2.06-6.64 4.89-.25.82-.4 1.69-.4 2.61 0 4.14 3.36 7.5 7.5 7.5s7.5-3.36 7.5-7.5c0-.92-.15-1.79-.4-2.61l1.45-1.45C22.44 8.78 22.75 10.11 22.75 11.5c0 5.25-4.25 9.5-9.5 9.5S3.75 16.75 3.75 11.5c0-4.66 3.35-8.54 7.75-9.35v3.1c-2.69.75-4.75 3.19-4.75 6.25 0 3.59 2.91 6.5 6.5 6.5s6.5-2.91 6.5-6.5c0-1.79-.73-3.41-1.91-4.59l-1.28 1.53zM11.75 1h2v10h-2z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Console Terminal -->
+    <div class="console-container">
+        <div class="console-header">
+            <span>Terminal / Live Logs</span>
+            <span id="ipBadge" style="color: #60A5FA;">Detecting IP...</span>
+        </div>
+        <div id="logs" class="console-logs">
+            <div>[SYS] RustDNS Engine Ready</div>
+        </div>
+    </div>
+
+    <!-- Bottom Buttons -->
+    <div class="bottom-actions">
+        <a href="https://discord.gg" target="_blank" class="action-btn">Discord</a>
+        <a href="https://github.com" target="_blank" class="action-btn">Website</a>
+    </div>
+
+    <script>
+        let isRunning = false;
+        let deviceIp = "";
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                isRunning = data.running;
+                deviceIp = data.ip;
+                document.getElementById('ipBadge').innerText = deviceIp ? "IP: " + deviceIp : "No Wi-Fi";
+                updateUI();
+            } catch (e) {}
+        }
+
+        async function toggleProxy() {
+            try {
+                const res = await fetch('/api/toggle', { method: 'POST' });
+                const data = await res.json();
+                isRunning = data.running;
+                updateUI();
+            } catch (e) {}
+        }
+
+        function updateUI() {
+            const dot = document.getElementById('statusDot');
+            const txt = document.getElementById('statusText');
+            const sub = document.getElementById('statusSub');
+            const btn = document.getElementById('powerBtn');
+
+            if (isRunning) {
+                dot.classList.add('active');
+                btn.classList.add('active');
+                txt.innerText = "Running";
+                sub.innerText = "PS5 DNS: " + deviceIp;
+            } else {
+                dot.classList.remove('active');
+                btn.classList.remove('active');
+                txt.innerText = "Stopped";
+                sub.innerText = "Tap to start";
+            }
+        }
+
+        // Canlı log akışı
+        setInterval(async () => {
+            if (!isRunning) return;
+            try {
+                const res = await fetch('/api/logs');
+                const logs = await res.json();
+                const logDiv = document.getElementById('logs');
+                logDiv.innerHTML = logs.map(l => `<div>${l}</div>`).join('');
+                logDiv.scrollTop = logDiv.scrollHeight;
+            } catch (e) {}
+        }, 1500);
+
+        fetchStatus();
+    </script>
+</body>
+</html>
+
